@@ -1,3 +1,5 @@
+import asyncio
+
 import aiohttp
 from typing import Any, Dict, Optional
 
@@ -8,13 +10,22 @@ class AiohttpManager:
         self.timeout = timeout
 
     async def _request(self, method: str, endpoint: str, **kwargs) -> Any:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            async with session.request(method, endpoint, **kwargs) as response:
-                response.raise_for_status()
-                try:
-                    return await response.json()
-                except aiohttp.ContentTypeError:
-                    return None
+        max_retries = 3
+        retry_delay = 1
+
+        for attempt in range(max_retries):
+            try:
+
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.timeout)
+                ) as session:
+                    async with session.request(method, endpoint, **kwargs) as response:
+                        response.raise_for_status()
+                        return await response.json()
+            except (aiohttp.ClientResponseError, asyncio.TimeoutError):
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(retry_delay)
 
     async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None,
                   headers: Optional[Dict[str, str]] = None) -> Any:

@@ -7,6 +7,7 @@ from app.minio_manager import MinioManager
 from app.redis_manager import RedisClient
 from app.settings import WEATHER_BASE_API_URL
 
+# In prod and scalable application need to divide these service on service and repository layers
 
 class WeatherService:
     def __init__(
@@ -25,8 +26,8 @@ class WeatherService:
         cached_weather_data = await self.redis_manager.get_cache(city)
         if not cached_weather_data:
             api_url = f"{WEATHER_BASE_API_URL}{city}?format=j1"
-            weather_data = await self.aiohttp_manager.get(api_url)
 
+            weather_data = await self.aiohttp_manager.get(api_url)
             if not weather_data:
                 print(f'error while fetching weather data')
                 raise HTTPException('error while fetching weather data')
@@ -38,6 +39,8 @@ class WeatherService:
             current_temp = {"city": city, "temp": cached_weather_data}
 
         s3_url = await self.minio_manager.save_weather_response(city, current_temp)
+        if not s3_url:
+            print(f'save_weather_response: file not uploaded to s3')
 
         log_data = {
             "Location": city,

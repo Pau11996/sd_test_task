@@ -37,10 +37,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         redis_manager=redis_manager
     )
     app.state.weather_service = weather_service
-    print(app.state)
 
     yield
-    print("WeatherService closed")
 
 app = FastAPI(title="Weather App", version="1.0.0", lifespan=lifespan)
 app.include_router(router)
